@@ -1,0 +1,88 @@
+# Dockerfile de exemplo explicando cada parametro
+
+# Escolhe a imagem base para construir a partir dela
+FROM ubuntu:20.04
+
+# Define o mantenedor da imagem (deprecated em versões mais novas do Docker)
+MAINTAINER Your Name <your.email@example.com>
+
+# Configura uma variável de ambiente
+ENV APP_HOME /usr/src/app
+
+# Cria o diretório APP_HOME
+RUN mkdir -p $APP_HOME
+
+# Define o diretório de trabalho
+WORKDIR $APP_HOME
+
+# Copia arquivos do host para o sistema de arquivos do contêiner
+COPY . $APP_HOME
+
+# Alternativa ao COPY, baixa arquivos de uma URL
+ADD https://example.com/somefile.tar.gz /tmp/somefile.tar.gz
+
+# Descompacta o arquivo baixado com ADD (não recomendável para novos projetos)
+RUN tar -xzf /tmp/somefile.tar.gz -C /tmp
+
+# Executa um comando durante o build da imagem
+RUN apt-get update && apt-get install -y python3 python3-pip
+
+# Define um ponto de montagem no contêiner
+VOLUME ["/data"]
+
+# Exponha a porta (DO CONTAINER) que a aplicação vai usar
+EXPOSE 8080
+
+# Especifica o comando a ser executado quando um contêiner é iniciado a partir da imagem
+CMD ["python3", "app.py"]
+
+# Alternativa ao CMD, permite definir o comando principal que será executado
+ENTRYPOINT ["python3", "app.py"]
+
+# Define um argumento de build, com valor padrão
+ARG APP_VERSION=1.0
+
+# Rotula a imagem com metadados
+LABEL version="$APP_VERSION"
+LABEL description="This is an example of Dockerfile with all possible instructions"
+LABEL maintainer="your.email@example.com"
+
+# Copia arquivos específicos do host para o contêiner
+COPY requirements.txt .
+
+# Executa um comando para instalar dependências
+RUN pip3 install -r requirements.txt
+
+# Define um sinalizador para sinal de parada do contêiner
+STOPSIGNAL SIGTERM
+
+# Define um usuário para executar comandos dentro do contêiner
+USER nobody
+
+# Alternativa ao ADD para copiar arquivos ou diretórios locais
+COPY . /app
+
+# Define a variável de ambiente em tempo de execução
+ENV ENVIRONMENT=production
+
+# Define um ponto de entrada no contêiner (não substituível por argumentos de linha de comando)
+ENTRYPOINT ["python3"]
+
+# Define argumentos que podem ser sobrescritos na linha de comando
+CMD ["app.py"]
+
+# Especifica o número de tentativas para reiniciar o contêiner em caso de falha
+HEALTHCHECK --interval=30s --timeout=10s --retries=3 CMD curl -f http://localhost/ || exit 1
+
+# Define uma instrução SHELL alternativa
+SHELL ["/bin/bash", "-c"]
+
+# Declara que o contêiner deve ser executado como um serviço (apenas em Windows)
+# SHELL ["powershell", "-command"]
+
+# Especifica a entrada padrão da instrução do Dockerfile
+ONBUILD COPY . /app
+ONBUILD RUN pip3 install -r /app/requirements.txt
+
+# Define um sinalizador que define uma camada do build
+LABEL stage=builder

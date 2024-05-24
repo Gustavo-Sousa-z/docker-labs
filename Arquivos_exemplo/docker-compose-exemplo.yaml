@@ -1,0 +1,88 @@
+version: '3.8' # Versão do Docker Compose. Escolha a versão que melhor se adequa às suas necessidades. 
+
+services: # Definição dos serviços.
+  web: # Nome do serviço.
+    image: nginx:latest # Imagem do Docker a ser usada para o serviço.
+    build: # Definições de build.
+      context: ./web # Diretório de build.
+      dockerfile: Dockerfile # Nome do Dockerfile.
+      args: # Argumentos de build.
+        APP_HOME: /myapp
+    container_name: my-web-container # Nome do contêiner.
+    ports: # Mapeamento de portas.
+      - "80:80" # Porta local:Porta do contêiner.
+    environment: # Variáveis de ambiente.
+      - NGINX_HOST=localhost
+      - NGINX_PORT=80
+    volumes: # Montagem de volumes.
+      - ./web/data:/var/www/html
+    networks: # Redes em que o serviço está.
+      - frontend
+    depends_on: # Dependências de outros serviços.
+      - db
+    logging: # Configuração de logging.
+      driver: json-file
+      options:
+        max-size: "200k"
+        max-file: "10"
+    deploy: # Configurações de deploy.
+      replicas: 3 # Número de réplicas.
+      update_config: # Configurações de atualização.
+        parallelism: 2
+        delay: 10s
+      restart_policy: # Política de reinício.
+        condition: on-failure
+    healthcheck: # Verificação de saúde.
+      test: ["CMD", "curl", "-f", "http://localhost"] # Comando de teste.
+      interval: 30s # Intervalo entre testes.
+      timeout: 10s # Tempo limite para cada teste.
+      retries: 3 # Número de tentativas.
+    secrets: # Segredos gerenciados pelo Docker.
+      - my_secret
+    configs: # Configurações gerenciadas pelo Docker.
+      - source: my_config
+        target: /etc/config_file
+    runtime: runc # Runtime do contêiner.
+    init: true # Inicializar o contêiner com init.
+
+  db: # Nome do serviço.
+    image: postgres:latest # Imagem do Docker a ser usada para o serviço.
+    environment: # Variáveis de ambiente.
+      - POSTGRES_DB=mydatabase
+      - POSTGRES_USER=myuser
+      - POSTGRES_PASSWORD=mypassword
+    volumes: # Montagem de volumes.
+      - db_data:/var/lib/postgresql/data
+    networks: # Redes em que o serviço está.
+      - backend
+    deploy: # Configurações de deploy.
+      replicas: 1 # Número de réplicas.
+      restart_policy: # Política de reinício.
+        condition: on-failure
+    secrets: # Segredos gerenciados pelo Docker.
+      - db_password
+    configs: # Configurações gerenciadas pelo Docker.
+      - source: db_config
+        target: /etc/db_config
+
+volumes: # Definição de volumes.
+  db_data: # Nome do volume.
+    driver: local # Driver do volume.
+
+networks: # Definição de redes.
+  frontend: # Nome da rede.
+    driver: bridge # Driver da rede.
+  backend: # Nome da rede.
+    driver: bridge # Driver da rede.
+
+secrets: # Definição de segredos.
+  my_secret: # Nome do segredo.
+    file: ./secrets/my_secret.txt # Arquivo de origem do segredo.
+  db_password: # Nome do segredo.
+    file: ./secrets/db_password.txt # Arquivo de origem do segredo.
+
+configs: # Definição de configurações.
+  my_config: # Nome da configuração.
+    file: ./configs/my_config.txt # Arquivo de origem da configuração.
+  db_config: # Nome da configuração.
+    file: ./configs/db_config.txt # Arquivo de origem da configuração.
